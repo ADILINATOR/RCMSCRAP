@@ -1,56 +1,121 @@
+from download import download_file_from_iframe, find_file_from_iframe, download_pdf_from_webpage, add_text_to_pdf
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
-import csv
+from urllib.parse import urljoin
 
-def check_pdf_links(url):
-    pdf_details = []
 
-    # Fetch the webpage content
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching {url}: {e}")
-        return pdf_details
+# Function to download a PDF file (placeholder function)
 
-    # Parse HTML
-    soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Find all <a> tags with href attributes
-    for link in soup.find_all('a', href=True):
-        href = link['href']
+def main():
+    # url = "http://www.rcmbase.kz/en/karzav/karzav_card/{n}/"
+    #
+    # # Send a GET request to the URL
+    # response = requests.get(url)
+    #
+    # # Check if request was successful
+    # if response.status_code == 200:
+    #     # Parse the HTML content
+    #     soup = BeautifulSoup(response.content, 'html.parser')
+    #
+    #     # Find all links (a tags) in the page
+    #     links = soup.find_all('a', href=True)
+    #     # Iterate through each link
+    #     for link in links:
+    #         href = link['href']
+    #         i = 0
+    #         # Assuming we're interested in PDF links, you can add more specific checks if needed
+    #         if href.endswith('.pdf'):
+    #             # Simulate downloading the PDF file
+    #             print(href)
+    #             if href.startswith('/'):
+    #                 href = "http://www.rcmbase.kz" + href
+    #             download_file_from_iframe(href, "/home/adl/kazdornii/karzav/dnld" + str(i))
+    #             add_text_to_pdf("/home/adl/kazdornii/karzav/dnld" + str(i), href)
+    #             i = i + 1
+    #         else:
+    #             print(f"Ignoring non-PDF link: {href}")
+    # else:
+    #     print(f"Failed to retrieve data from {url}. Status code: {response.status_code}")
 
-        # Check if the link ends with .pdf
-        if href.lower().endswith('.pdf'):
-            # If the link is relative, make it absolute
-            if not urlparse(href).netloc:
-                href = urljoin(url, href)
 
-            # Check if the PDF file is empty
-            try:
-                pdf_response = requests.head(href)
-                pdf_response.raise_for_status()
-                content_length = int(pdf_response.headers.get('Content-Length', 0))
-                is_empty = content_length == 0
-            except requests.exceptions.RequestException as e:
-                print(f"Error checking {href}: {e}")
-                is_empty = True  # Assume empty if there's an error checking the PDF
 
-            # Collect PDF details
-            pdf_details.append({'URL': href, 'IsEmpty': is_empty})
+    base_url = "http://www.rcmbase.kz/en/karzav/karzav_card/{}"
+    start_n = 1
+    end_n = 545  # Set the range as needed
+    i = 0
+    links404 = [];
+    # for n in range(start_n, end_n + 1):
+    #     url = base_url.format(n)
+    #     print(f"Processing URL: {url}")
+    #
+    #     # Send a GET request to the URL
+    #     response = requests.get(url)
+    #
+    #     # Check if request was successful
+    #     if response.status_code == 200:
+    #         # Parse the HTML content
+    #         soup = BeautifulSoup(response.content, 'html.parser')
+    #
+    #         # Find all links (a tags) in the page
+    #         links = soup.find_all('a', href=True)
+    #
+    #         # Iterate through each link
+    #
+    #         for link in links:
+    #             href = link['href']
+    #
+    #             # Assuming we're interested in PDF links, you can add more specific checks if needed
+    #             if href.endswith('.pdf'):
+    #                 # Simulate downloading the PDF file
+    #                 print(f"Found PDF link: {href}")
+    #                 if href.startswith('/'):
+    #                     href = "http://www.rcmbase.kz" + href
+    #                 download_path = f"/home/adl/kazdornii/karzav/dnld{i}.pdf"
+    #                 links404 = download_file_from_iframe(href, download_path)
+    #                 add_text_to_pdf(download_path, href)
+    #                 i += 1
+    #             else:
+    #                 print(f"Ignoring non-PDF link: {href}")
+    #     else:
+    #         print(f"Failed to retrieve data from {url}. Status code: {response.status_code}")
+    #
+    # print(links404)
+    import os
+    import csv
+    import PyPDF2
 
-    return pdf_details
+    def get_last_page_content(file_path):
+        try:
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                last_page = reader.pages[-1]
+                return last_page.extract_text().strip()
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+            return ""
 
-# Example usage:
+    def find_files_and_save_to_csv(directory, csv_file):
+        with open(csv_file, 'w', newline='') as csvfile:
+            fieldnames = ['file_name', 'last_page_content']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    if file.lower().endswith('.pdf'):
+                        file_path = os.path.join(root, file)
+                        if os.path.getsize(file_path) < 23000:  # Size in bytes
+                            last_page_content = get_last_page_content(file_path)
+                            writer.writerow({'file_name': file, 'last_page_content': last_page_content})
+
+    if __name__ == "__main__":
+        directory = 'home/adl/kazdornii/karzav/'
+        csv_file = 'output.csv'
+        find_files_and_save_to_csv(directory, csv_file)
+
+
 if __name__ == "__main__":
-    pdf_details = []
+    main()
 
-    # Using range() function to iterate 525 times
-    for i in range(525):
-        url = f"http://www.rcmbase.kz/en/karzav/karzav_card/{i + 1}/"
-        pdf_details.extend(check_pdf_links(url))
 
-    # Print or further process pdf_details as needed
-    for detail in pdf_details:
-        print(f"URL: {detail['URL']}, IsEmpty: {detail['IsEmpty']}")
