@@ -2,7 +2,9 @@ from download import download_file_from_iframe, find_file_from_iframe, download_
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-
+import os
+import csv
+import PyPDF2
 
 # Function to download a PDF file (placeholder function)
 
@@ -81,16 +83,20 @@ def main():
     #         print(f"Failed to retrieve data from {url}. Status code: {response.status_code}")
     #
     # print(links404)
-    import os
-    import csv
-    import PyPDF2
+
 
     def get_last_page_content(file_path):
         try:
             with open(file_path, 'rb') as file:
                 reader = PyPDF2.PdfReader(file)
-                last_page = reader.pages[-1]
-                return last_page.extract_text().strip()
+                if len(reader.pages) > 0:
+                    last_page = reader.pages[-1]
+                    text = last_page.extract_text().strip()
+                    print(f"Extracted text from {file_path}")
+                    return text
+                else:
+                    print(f"No pages found in {file_path}")
+                    return ""
         except Exception as e:
             print(f"Error reading {file_path}: {e}")
             return ""
@@ -105,14 +111,17 @@ def main():
                 for file in files:
                     if file.lower().endswith('.pdf'):
                         file_path = os.path.join(root, file)
-                        if os.path.getsize(file_path) < 23000:  # Size in bytes
+                        file_size = os.path.getsize(file_path)
+                        print(f"Checking file: {file_path}, Size: {file_size} bytes")
+                        if file_size < 25000:  # Size in bytes
                             last_page_content = get_last_page_content(file_path)
                             writer.writerow({'file_name': file, 'last_page_content': last_page_content})
 
     if __name__ == "__main__":
-        directory = 'home/adl/kazdornii/karzav/'
+        directory = '/home/adl/kazdornii/karzav/'  # Ensure this is the correct path
         csv_file = 'output.csv'
         find_files_and_save_to_csv(directory, csv_file)
+        print(f"CSV file {csv_file} created successfully.")
 
 
 if __name__ == "__main__":
